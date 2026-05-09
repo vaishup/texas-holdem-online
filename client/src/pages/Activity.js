@@ -1,13 +1,26 @@
-import React, { useEffect, useState } from 'react';
-import styled from 'styled-components';
+import React, { useContext, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import styled, { keyframes } from 'styled-components';
 import Container from '../components/layout/Container';
 import Heading from '../components/typography/Heading';
 import Text from '../components/typography/Text';
 import Loader from '../components/loading/Loader';
 import MOCK_TRANSACTIONS from '../data/activityTransactions';
 import useScrollToTopOnPageLoad from '../hooks/useScrollToTopOnPageLoad';
+import globalContext from '../context/global/globalContext';
 
-const LOAD_DELAY_MS = 600;
+const LOAD_DELAY_MS = 1500;
+
+const fadeInUp = keyframes`
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+`;
 
 const Main = styled.main`
   width: 100%;
@@ -16,11 +29,31 @@ const Main = styled.main`
   padding: 6rem 1.5rem 3rem;
 `;
 
+const ContentShell = styled.div`
+  position: relative;
+  min-height: 420px;
+  margin-top: 1.5rem;
+`;
+
+const StateLayer = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  animation: ${fadeInUp} 280ms ease-out both;
+`;
+
+const LoadingWrapper = styled(StateLayer)`
+  align-items: center;
+  gap: 1rem;
+  padding: 4rem 0;
+`;
+
 const TxList = styled.ul`
   list-style: none;
   padding: 0;
-  margin: 1.5rem 0 0;
+  margin: 0;
   border-top: 1px solid ${(props) => props.theme.colors.darkBg};
+  animation: ${fadeInUp} 320ms ease-out both;
 `;
 
 const TxItem = styled.li`
@@ -60,17 +93,10 @@ const TxTimestamp = styled.time`
   color: ${(props) => props.theme.colors.fontColorDarkLighter};
 `;
 
-const LoadingWrapper = styled.div`
-  display: flex;
-  flex-direction: column;
+const EmptyState = styled(StateLayer)`
   align-items: center;
-  gap: 1rem;
-  padding: 2rem 0;
-`;
-
-const EmptyState = styled.div`
-  padding: 2rem 0;
   text-align: center;
+  padding: 4rem 0;
 `;
 
 const formatChips = (amount) =>
@@ -84,18 +110,32 @@ const formatTimestamp = (iso) => {
   });
 };
 
+const isLoggedIn = (userName) =>
+  Boolean(userName) || Boolean(localStorage.getItem('token'));
+
 const Activity = () => {
   useScrollToTopOnPageLoad();
+  const navigate = useNavigate();
+  const { userName } = useContext(globalContext);
   const [isLoading, setIsLoading] = useState(true);
   const [transactions, setTransactions] = useState([]);
 
   useEffect(() => {
+    if (!isLoggedIn(userName)) {
+      navigate('/login', { replace: true });
+    }
+  }, [userName, navigate]);
+
+  useEffect(() => {
+    if (!isLoggedIn(userName)) return undefined;
     const timer = setTimeout(() => {
       setTransactions(MOCK_TRANSACTIONS);
       setIsLoading(false);
     }, LOAD_DELAY_MS);
     return () => clearTimeout(timer);
-  }, []);
+  }, [userName]);
+
+  if (!isLoggedIn(userName)) return null;
 
   return (
     <Container fullHeight padding="0">
@@ -105,37 +145,39 @@ const Activity = () => {
         </Heading>
         <Text>Your recent chip movements at the table.</Text>
 
-        {isLoading && (
-          <LoadingWrapper role="status" aria-live="polite">
-            <Loader />
-            <Text>Loading activity…</Text>
-          </LoadingWrapper>
-        )}
+        <ContentShell>
+          {isLoading && (
+            <LoadingWrapper role="status" aria-live="polite">
+              <Loader />
+              <Text>Loading activity…</Text>
+            </LoadingWrapper>
+          )}
 
-        {!isLoading && transactions.length === 0 && (
-          <EmptyState>
-            <Heading as="h2" headingClass="h5">No activity yet</Heading>
-            <Text>Once you play a hand, your transactions will appear here.</Text>
-          </EmptyState>
-        )}
+          {!isLoading && transactions.length === 0 && (
+            <EmptyState>
+              <Heading as="h2" headingClass="h5">No activity yet</Heading>
+              <Text>Once you play a hand, your transactions will appear here.</Text>
+            </EmptyState>
+          )}
 
-        {!isLoading && transactions.length > 0 && (
-          <TxList aria-label="Recent transactions">
-            {transactions.map((tx) => (
-              <TxItem key={tx.id}>
-                <TxRow>
-                  <TxLabel>{tx.label}</TxLabel>
-                  <TxAmount $positive={tx.amount > 0}>
-                    {formatChips(tx.amount)}
-                  </TxAmount>
-                </TxRow>
-                <TxTimestamp dateTime={tx.timestamp}>
-                  {formatTimestamp(tx.timestamp)}
-                </TxTimestamp>
-              </TxItem>
-            ))}
-          </TxList>
-        )}
+          {!isLoading && transactions.length > 0 && (
+            <TxList aria-label="Recent transactions">
+              {transactions.map((tx) => (
+                <TxItem key={tx.id}>
+                  <TxRow>
+                    <TxLabel>{tx.label}</TxLabel>
+                    <TxAmount $positive={tx.amount > 0}>
+                      {formatChips(tx.amount)}
+                    </TxAmount>
+                  </TxRow>
+                  <TxTimestamp dateTime={tx.timestamp}>
+                    {formatTimestamp(tx.timestamp)}
+                  </TxTimestamp>
+                </TxItem>
+              ))}
+            </TxList>
+          )}
+        </ContentShell>
       </Main>
     </Container>
   );
