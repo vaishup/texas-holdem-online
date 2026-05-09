@@ -54,6 +54,11 @@ const Navbar = ({
 
           <Hider hideOnMobile>
             <Spacer>
+              {location.pathname !== '/activity' && (
+                <Button as={Link} to="/activity" secondary small>
+                  Activity
+                </Button>
+              )}
               {location.pathname !== '/register' && (
                 <Button as={Link} to="/register" primary small>
                   Register
