@@ -194,6 +194,21 @@ const NavMenu = ({
           </MenuItem>
           <MenuItem
             as={Link}
+            to="/activity"
+            onClick={() => {
+              onClose();
+            }}
+          >
+            Player Activity
+            <img
+              src={userIcon}
+              alt=""
+              width="25"
+              style={{ width: '25px' }}
+            />
+          </MenuItem>
+          <MenuItem
+            as={Link}
             to="/dashboard"
             onClick={() => {
               onClose();
