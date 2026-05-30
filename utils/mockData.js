@@ -6,74 +6,7 @@ const config = require('../config');
  */
 
 let users = [];
-let ledgerTransactions = [];
 let nextUserId = 1;
-let nextTransactionId = 1;
-
-const createLedgerTransaction = (userId, label, amount, timestamp, metadata = {}) => ({
-  id: `tx-${String(nextTransactionId++).padStart(3, '0')}`,
-  userId: String(userId),
-  label,
-  amount,
-  timestamp,
-  type: amount >= 0 ? 'credit' : 'debit',
-  metadata,
-});
-
-const ledgerTemplates = [
-
-  [
-    {
-      label: 'Initial chips grant',
-      amount: config.INITIAL_CHIPS_AMOUNT,
-      timestamp: '2026-05-28T16:00:00Z',
-      metadata: { source: 'registration' },
-    },
-    {
-      label: 'Buy-in: Heads-up Practice',
-      amount: -1000,
-      timestamp: '2026-05-28T16:08:11Z',
-      metadata: { tableId: 1, mode: 'practice' },
-    },
-    {
-      label: 'All-in loss',
-      amount: -2400,
-      timestamp: '2026-05-28T16:19:30Z',
-      metadata: { tableId: 1, handId: 'demo-hand-all-in-loss' },
-    },
-    {
-      label: 'Free chips top-up',
-      amount: 5000,
-      timestamp: '2026-05-28T16:25:00Z',
-      metadata: { source: 'free-chips' },
-    },
-    {
-      label: 'Three of a kind pot win',
-      amount: 3150,
-      timestamp: '2026-05-28T16:40:42Z',
-      metadata: { tableId: 1, handId: 'demo-hand-trips' },
-    },
-    {
-      label: 'Table stand-up refund',
-      amount: 1725,
-      timestamp: '2026-05-28T16:51:09Z',
-      metadata: { tableId: 1, source: 'stand-up' },
-    },
-  ],
-];
-
-const createSampleLedgerTransactions = (userId) => {
-  const templateIndex = (Number(userId) - 1) % ledgerTemplates.length;
-  return ledgerTemplates[templateIndex].map((transaction) =>
-    createLedgerTransaction(
-      userId,
-      transaction.label,
-      transaction.amount,
-      transaction.timestamp,
-      transaction.metadata,
-    ),
-  );
-};
 
 /**
  * Initialize mock data with demo users
@@ -100,11 +33,6 @@ const initializeMockData = () => {
     },
   ];
   nextUserId = 3;
-  nextTransactionId = 1;
-  ledgerTransactions = [
-    ...createSampleLedgerTransactions('1'),
-    ...createSampleLedgerTransactions('2'),
-  ];
 };
 
 // Initialize on module load
@@ -164,7 +92,6 @@ const mockDataStore = {
       };
 
       users.push(newUser);
-      ledgerTransactions.push(...createSampleLedgerTransactions(newUser.id));
       return newUser;
     },
 
@@ -216,44 +143,6 @@ const mockDataStore = {
      */
     reset: () => {
       initializeMockData();
-    },
-  },
-  ledger: {
-    /**
-     * Find ledger transactions by user ID, newest first
-     * @param {string} userId - User ID
-     * @returns {Array} User transactions
-     */
-    findByUserId: (userId) => {
-      if (!userId) return [];
-      return ledgerTransactions
-        .filter((transaction) => transaction.userId === String(userId))
-        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-        .map(({ userId: _userId, ...transaction }) => transaction);
-    },
-
-    /**
-     * Add a ledger transaction for a user
-     * @param {string} userId - User ID
-     * @param {Object} transactionData - Transaction data
-     * @returns {Object} Created transaction
-     */
-    create: (userId, transactionData) => {
-      if (!userId || !transactionData || !transactionData.label) {
-        throw new Error('Invalid ledger transaction data');
-      }
-
-      const transaction = createLedgerTransaction(
-        userId,
-        transactionData.label,
-        Number(transactionData.amount || 0),
-        transactionData.timestamp || new Date().toISOString(),
-        transactionData.metadata || {},
-      );
-
-      ledgerTransactions.unshift(transaction);
-      const { userId: _userId, ...publicTransaction } = transaction;
-      return publicTransaction;
     },
   },
 };

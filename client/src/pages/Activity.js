@@ -1,19 +1,15 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
 import styled, { keyframes } from 'styled-components';
 import Container from '../components/layout/Container';
 import Heading from '../components/typography/Heading';
 import Text from '../components/typography/Text';
 import Loader from '../components/loading/Loader';
+import MOCK_TRANSACTIONS from '../data/activityTransactions';
 import useScrollToTopOnPageLoad from '../hooks/useScrollToTopOnPageLoad';
 import globalContext from '../context/global/globalContext';
-import config from '../clientConfig';
 
-const getApiUrl = (path) => {
-  const base = config.apiBaseUrl || '';
-  return base ? `${base.replace(/\/$/, '')}/${path}` : `/${path}`;
-};
+const LOAD_DELAY_MS = 1500;
 
 const fadeInUp = keyframes`
   from {
@@ -96,23 +92,6 @@ const TxTimestamp = styled.time`
   color: ${(props) => props.theme.colors.fontColorDarkLighter};
 `;
 
-const Summary = styled.div`
-  display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 1rem 0;
-  border-top: 1px solid ${(props) => props.theme.colors.darkBg};
-`;
-
-const Balance = styled.span`
-  font-family: ${(props) => props.theme.fonts.fontFamilySansSerif};
-  font-size: 1.35rem;
-  font-weight: 700;
-  color: ${(props) => props.theme.colors.primaryCta};
-  white-space: nowrap;
-`;
-
 const EmptyState = styled(StateLayer)`
   align-items: center;
   text-align: center;
@@ -139,8 +118,6 @@ const Activity = () => {
   const { userName } = useContext(globalContext);
   const [isLoading, setIsLoading] = useState(true);
   const [transactions, setTransactions] = useState([]);
-  const [balance, setBalance] = useState(0);
-  const [error, setError] = useState('');
 
   useEffect(() => {
     if (!isLoggedIn(userName)) {
@@ -150,49 +127,11 @@ const Activity = () => {
 
   useEffect(() => {
     if (!isLoggedIn(userName)) return undefined;
-
-    let isMounted = true;
-
-    const loadLedger = async () => {
-      setIsLoading(true);
-      setError('');
-
-      try {
-        const token = localStorage.getItem('token');
-        const { data } = await axios.get(getApiUrl('api/transaction/history'), {
-          headers: {
-            'x-auth-token': token,
-          },
-        });
-
-        if (!isMounted) return;
-
-        setTransactions(data.data?.transactions || []);
-        setBalance(data.data?.balance || 0);
-      } catch (err) {
-        if (!isMounted) return;
-
-        const message =
-          err.response?.data?.message ||
-          err.response?.data?.error?.message ||
-          err.message ||
-          'Unable to load player activity.';
-
-        setError(message);
-        setTransactions([]);
-        setBalance(0);
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
-    };
-
-    loadLedger();
-
-    return () => {
-      isMounted = false;
-    };
+    const timer = setTimeout(() => {
+      setTransactions(MOCK_TRANSACTIONS);
+      setIsLoading(false);
+    }, LOAD_DELAY_MS);
+    return () => clearTimeout(timer);
   }, [userName]);
 
   if (!isLoggedIn(userName)) return null;
@@ -201,9 +140,9 @@ const Activity = () => {
     <Container fullHeight padding="0">
       <Main aria-labelledby="activity-heading" aria-busy={isLoading}>
         <Heading as="h1" id="activity-heading" headingClass="h2">
-          Player Ledger
+          Player Activity
         </Heading>
-        <Text>Read-only transaction history for your chip movements.</Text>
+        <Text>Your recent chip movements at the table.</Text>
 
         <ContentShell>
           {isLoading && (
@@ -213,40 +152,27 @@ const Activity = () => {
             </LoadingWrapper>
           )}
 
-          {!isLoading && error && (
-            <EmptyState role="alert">
-              <Heading as="h2" headingClass="h5">Activity unavailable</Heading>
-              <Text>{error}</Text>
-            </EmptyState>
-          )}
-
-          {!isLoading && !error && transactions.length === 0 && (
+          {!isLoading && transactions.length === 0 && (
             <EmptyState>
               <Heading as="h2" headingClass="h5">No activity yet</Heading>
               <Text>Once you play a hand, your transactions will appear here.</Text>
             </EmptyState>
           )}
 
-          {!isLoading && !error && transactions.length > 0 && (
-            <>
-              <Summary aria-label="Ledger balance">
-                <Text>Current ledger balance</Text>
-                <Balance>{formatChips(balance)}</Balance>
-              </Summary>
-              <TxList aria-label="Recent transactions">
-                {transactions.map((tx) => (
-                  <TxItem key={tx.id}>
-                    <TxLabel>{tx.label}</TxLabel>
-                    <TxAmount $positive={tx.amount > 0}>
-                      {formatChips(tx.amount)}
-                    </TxAmount>
-                    <TxTimestamp dateTime={tx.timestamp}>
-                      {formatTimestamp(tx.timestamp)}
-                    </TxTimestamp>
-                  </TxItem>
-                ))}
-              </TxList>
-            </>
+          {!isLoading && transactions.length > 0 && (
+            <TxList aria-label="Recent transactions">
+              {transactions.map((tx) => (
+                <TxItem key={tx.id}>
+                  <TxLabel>{tx.label}</TxLabel>
+                  <TxAmount $positive={tx.amount > 0}>
+                    {formatChips(tx.amount)}
+                  </TxAmount>
+                  <TxTimestamp dateTime={tx.timestamp}>
+                    {formatTimestamp(tx.timestamp)}
+                  </TxTimestamp>
+                </TxItem>
+              ))}
+            </TxList>
           )}
         </ContentShell>
       </Main>
