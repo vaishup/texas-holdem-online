@@ -5,6 +5,7 @@ const { HTTP_STATUS, ERROR_MESSAGES } = require('../utils/constants');
 
 /**
  * @route   GET api/ledger
+ * @route   GET api/transaction/history
  * @desc    Get read-only player ledger transactions
  * @access  Private
  */
@@ -22,7 +23,9 @@ exports.getPlayerLedger = asyncHandler(async (req, res) => {
     res,
     {
       userId: user.id,
+      playerName: user.name,
       balance,
+      currency: 'chips',
       transactions,
     },
     'Ledger retrieved successfully',

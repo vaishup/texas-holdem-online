@@ -21,88 +21,7 @@ const createLedgerTransaction = (userId, label, amount, timestamp, metadata = {}
 });
 
 const ledgerTemplates = [
-  [
-    {
-      label: 'Welcome bonus chips',
-      amount: 25000,
-      timestamp: '2026-05-30T13:10:00Z',
-      metadata: { source: 'promotion' },
-    },
-    {
-      label: 'Buy-in: Table 1 (Vintage Stakes)',
-      amount: -5000,
-      timestamp: '2026-05-30T13:18:22Z',
-      metadata: { tableId: 1 },
-    },
-    {
-      label: 'Pair of kings pot win',
-      amount: 3825,
-      timestamp: '2026-05-30T13:26:41Z',
-      metadata: { tableId: 1, handId: 'demo-hand-kings' },
-    },
-    {
-      label: 'Big blind posted',
-      amount: -100,
-      timestamp: '2026-05-30T13:31:08Z',
-      metadata: { tableId: 1, blind: 'big' },
-    },
-    {
-      label: 'Rebuy at Table 1',
-      amount: -2500,
-      timestamp: '2026-05-30T13:44:15Z',
-      metadata: { tableId: 1, source: 'rebuy' },
-    },
-    {
-      label: 'Flush showdown win',
-      amount: 6900,
-      timestamp: '2026-05-30T13:58:49Z',
-      metadata: { tableId: 1, handId: 'demo-hand-flush' },
-    },
-    {
-      label: 'Daily login reward',
-      amount: 1500,
-      timestamp: '2026-05-30T14:05:00Z',
-      metadata: { source: 'daily-reward' },
-    },
-  ],
-  [
-    {
-      label: 'Referral reward',
-      amount: 10000,
-      timestamp: '2026-05-29T20:15:00Z',
-      metadata: { source: 'referral' },
-    },
-    {
-      label: 'Tournament entry: Friday Freeroll',
-      amount: -3000,
-      timestamp: '2026-05-29T20:30:00Z',
-      metadata: { tournamentId: 'friday-freeroll' },
-    },
-    {
-      label: 'Tournament prize: 6th place',
-      amount: 8750,
-      timestamp: '2026-05-29T21:42:18Z',
-      metadata: { tournamentId: 'friday-freeroll', place: 6 },
-    },
-    {
-      label: 'Small blind posted',
-      amount: -50,
-      timestamp: '2026-05-29T22:01:12Z',
-      metadata: { tableId: 1, blind: 'small' },
-    },
-    {
-      label: 'Straight draw called and lost',
-      amount: -1400,
-      timestamp: '2026-05-29T22:09:37Z',
-      metadata: { tableId: 1, handId: 'demo-hand-straight-draw' },
-    },
-    {
-      label: 'Cashout to wallet',
-      amount: -4500,
-      timestamp: '2026-05-29T22:20:05Z',
-      metadata: { source: 'wallet' },
-    },
-  ],
+
   [
     {
       label: 'Initial chips grant',
@@ -309,6 +228,7 @@ const mockDataStore = {
       if (!userId) return [];
       return ledgerTransactions
         .filter((transaction) => transaction.userId === String(userId))
+        .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
         .map(({ userId: _userId, ...transaction }) => transaction);
     },
 
