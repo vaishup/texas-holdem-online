@@ -1,15 +1,19 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import styled, { keyframes } from 'styled-components';
 import Container from '../components/layout/Container';
 import Heading from '../components/typography/Heading';
 import Text from '../components/typography/Text';
 import Loader from '../components/loading/Loader';
-import MOCK_TRANSACTIONS from '../data/activityTransactions';
 import useScrollToTopOnPageLoad from '../hooks/useScrollToTopOnPageLoad';
 import globalContext from '../context/global/globalContext';
+import config from '../clientConfig';
 
-const LOAD_DELAY_MS = 1500;
+const getApiUrl = (path) => {
+  const base = config.apiBaseUrl || '';
+  return base ? `${base.replace(/\/$/, '')}/${path}` : `/${path}`;
+};
 
 const fadeInUp = keyframes`
   from {
@@ -118,6 +122,7 @@ const Activity = () => {
   const { userName } = useContext(globalContext);
   const [isLoading, setIsLoading] = useState(true);
   const [transactions, setTransactions] = useState([]);
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (!isLoggedIn(userName)) {
@@ -127,11 +132,47 @@ const Activity = () => {
 
   useEffect(() => {
     if (!isLoggedIn(userName)) return undefined;
-    const timer = setTimeout(() => {
-      setTransactions(MOCK_TRANSACTIONS);
-      setIsLoading(false);
-    }, LOAD_DELAY_MS);
-    return () => clearTimeout(timer);
+
+    let isMounted = true;
+
+    const loadTransactionHistory = async () => {
+      setIsLoading(true);
+      setError('');
+
+      try {
+        const token = localStorage.getItem('token');
+        const { data } = await axios.get(getApiUrl('api/transaction/history'), {
+          headers: {
+            'x-auth-token': token,
+          },
+        });
+
+        if (!isMounted) return;
+
+        setTransactions(data.data?.transactions || []);
+      } catch (err) {
+        if (!isMounted) return;
+
+        const message =
+          err.response?.data?.message ||
+          err.response?.data?.error?.message ||
+          err.message ||
+          'Unable to load player activity.';
+
+        setError(message);
+        setTransactions([]);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    loadTransactionHistory();
+
+    return () => {
+      isMounted = false;
+    };
   }, [userName]);
 
   if (!isLoggedIn(userName)) return null;
@@ -152,14 +193,21 @@ const Activity = () => {
             </LoadingWrapper>
           )}
 
-          {!isLoading && transactions.length === 0 && (
+          {!isLoading && error && (
+            <EmptyState role="alert">
+              <Heading as="h2" headingClass="h5">Activity unavailable</Heading>
+              <Text>{error}</Text>
+            </EmptyState>
+          )}
+
+          {!isLoading && !error && transactions.length === 0 && (
             <EmptyState>
               <Heading as="h2" headingClass="h5">No activity yet</Heading>
               <Text>Once you play a hand, your transactions will appear here.</Text>
             </EmptyState>
           )}
 
-          {!isLoading && transactions.length > 0 && (
+          {!isLoading && !error && transactions.length > 0 && (
             <TxList aria-label="Recent transactions">
               {transactions.map((tx) => (
                 <TxItem key={tx.id}>
